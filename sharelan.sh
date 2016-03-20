@@ -6,6 +6,7 @@ eth0="enp4s0f1"
 eth1="wlan0"
 
 usage(){
+    echo Usage:
     echo "$0 eth0 eth1 start"
     echo "$0 stop"
 }
