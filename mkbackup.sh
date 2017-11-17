@@ -49,7 +49,7 @@ function mount_bkp_volume () {
     # no mountpoint (device not mounted):
     if [ "$mpoints" = "" ] ; then
         echo "Backup device $dev not mounted"
-        echo "Device $dev will be mounted to $BACKUP_MOUNT_POINT"
+        echo "Device $dev will be mounted at $BACKUP_MOUNT_POINT"
         mount UUID=$BACKUP_DRIVE_UUID $BACKUP_MOUNT_POINT
     else
 
@@ -69,6 +69,15 @@ function mount_bkp_volume () {
         echo "Device will be binded to $BACKUP_MOUNT_POINT"
         mount -o bind $i $BACKUP_MOUNT_POINT
     fi
+}
+
+function umount_bkp_volume () {
+   #TODO: add check with lsof 
+    umount $BACKUP_MOUNT_POINT
+}
+
+function make_backup () {
+    date >> $BACKUP_MOUNT_POINT/testing.txt
 }
 
 #
@@ -99,11 +108,10 @@ case $1 in
         #make_bkp_snapshot $LVM_VOL $LVM_GRP
         #mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
 
-        #make_backup $SNAP_MOUNT_POINT $BACKUP_MOUNT_POINT $BACKUP_TARGET #BACKUP_EXCLUDE
+        make_backup
         
         #delete_bkp_snapshot $LVM_VOL $LVM_GRP 
-        #umount_bkp_volume ;;
-        ;;
+        umount_bkp_volume ;;
 
     (test)
         mount_bkp_volume ;;
