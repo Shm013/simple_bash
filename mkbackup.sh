@@ -13,7 +13,7 @@ SNAP_NAME="${LVM_VOL}-backup_snap"
 SNAP_MOUNT_POINT="/media/${LVM_GRP}-${LVM_VOL}-backup_snap"
 
 BACKUP_TARGET="shm"
-BACKUP_EXCLUDE="shm/Temporary"
+BACKUP_EXCLUDE="shm/Temporary shm/Testing*"
 
 #
 # Find backup volume by UUID and moint it
@@ -77,7 +77,18 @@ function umount_bkp_volume () {
 }
 
 function make_backup () {
-    date >> $BACKUP_MOUNT_POINT/testing.txt
+
+    ex_file=$(mktemp /tmp/mkbackup.XXXXXXXXX)
+
+    for x in $BACKUP_EXCLUDE; do
+        echo $x >> $ex_file
+    done
+
+    src=${SNAP_MOUNT_POINT}/${BACKUP_TARGET} 
+    dest=$BACKUP_MOUNT_POINT
+    rsync -av --exclude-from $ex_file $src $dest
+
+    rm $ex_file
 }
 
 function make_bkp_snapshot () {
@@ -120,8 +131,6 @@ function delete_bkp_snapshot () {
 function usage () {
     echo "usage here"
 }
-
-echo $1
 
 case $1 in
     (all)
