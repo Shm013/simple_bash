@@ -132,18 +132,20 @@ function usage () {
 }
 
 case $1 in
-    (all)
-        mount_bkp_volume
+    (start)
 
-        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
-        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
 
-        make_backup
-        
-        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
-        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
-
-        umount_bkp_volume ;;
+#        mount_bkp_volume
+#
+#        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
+#        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+#
+#        make_backup
+#        
+#        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+#        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
+#
+#        umount_bkp_volume ;;
 
     (*) 
         usage ;;
