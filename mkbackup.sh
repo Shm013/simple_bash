@@ -20,6 +20,15 @@ BACKUP_EXCLUDE="shm/Temporary shm/Testing*"
 #
 function mount_bkp_volume () {
         
+    # get major,minore number for univocal device identification
+    dev=$(findfs UUID=$BACKUP_DRIVE_UUID)
+
+    # device not exist (or some other error):
+    if [ $? == 1 ] ; then
+        echo "Error: Backup device with UUID $BACKUP_DRIVE_UUID not found!"
+        exit 1
+    fi
+
     # make dir for backup device if not exist:
     if [ ! -d $BACKUP_MOUNT_POINT ] ; then
         echo "Directory $BACKUP_MOUNT_POINT does not exist. Creating."
@@ -32,16 +41,6 @@ function mount_bkp_volume () {
         fi
     fi
 
-    # get major,minore number for univocal device identification
-    dev=$(findfs UUID=$BACKUP_DRIVE_UUID)
-
-
-    # device not exist (or some other error):
-    if [ $? == 1 ] ; then
-        echo "Error: Backup device with UUID $BACKUP_DRIVE_UUID not found!"
-        exit 1 
-    fi
-    
     # may device has been already mounted?
     # lets find out his mountpoint:
     mpoints=($(awk -v d="$dev" ' $1 == d {print $2}' /proc/mounts))
@@ -95,6 +94,7 @@ function make_bkp_snapshot () {
     name=$1
     vol=$2
     group=$3
+
     lvcreate -n "${name}" -s "${group}/${vol}" -L $SNAP_SIZE
 }
 
@@ -119,7 +119,6 @@ function umount_snapshot () {
     mountpoint=$3
 
     umount "${mountpoint}"
-
 }
 
 function delete_bkp_snapshot () {
@@ -146,10 +145,6 @@ case $1 in
 
         umount_bkp_volume ;;
 
-    (test)
-        #make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP ;;
-        #mount_bkp_volume ;;
-        ;;
     (*) 
         usage ;;
 esac
