@@ -10,7 +10,7 @@ BACKUP_MOUNT_POINT="/media/backup"
 
 SNAP_SIZE="5Gb"
 SNAP_NAME="${LVM_VOL}-backup_snap"
-SNAP_MOUNT_POINT="${LVM_GRP}-${LVM_VOL}-backup_snap"
+SNAP_MOUNT_POINT="/media/${LVM_GRP}-${LVM_VOL}-backup_snap"
 
 BACKUP_TARGET="shm"
 BACKUP_EXCLUDE="shm/Temporary"
@@ -80,20 +80,41 @@ function make_backup () {
     date >> $BACKUP_MOUNT_POINT/testing.txt
 }
 
-#
-# 1 - lvm logical volume
-# 2 - lvm logical group
-#
 function make_bkp_snapshot () {
-    lvcreate -n "$1_backup" -s "$2/$1" -L $SNAP_SIZE
+    name=$1
+    vol=$2
+    group=$3
+    lvcreate -n "${name}" -s "${group}/${vol}" -L $SNAP_SIZE
 }
 
-#
-# 1 - lvm logical volume
-# 2 - lvm logical group
-#
+function mount_snapshot () {
+    name=$1
+    group=$2
+    mountpoint=$3
+
+    mkdir -p $mountpoint
+
+    mount /dev/${group}/${name} ${mountpoint}
+    # Error
+    if [ $? == 1 ] ; then
+        echo "Error: can't mount ${group}/${name} at ${mountpoint}"
+        exit 1 
+    fi
+}
+
+function umount_snapshot () {
+    name=$1
+    group=$2
+    mountpoint=$3
+
+    umount "${mountpoint}"
+
+}
+
 function delete_bkp_snapshot () {
-    lvremove -f "$2/$1_backup"
+    name=$1
+    group=$2
+    lvremove -f "${group}/${name}"
 }
 
 function usage () {
@@ -104,17 +125,22 @@ echo $1
 
 case $1 in
     (all)
-        mount_bkp_volume 
-        #make_bkp_snapshot $LVM_VOL $LVM_GRP
-        #mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+        mount_bkp_volume
+
+        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
+        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
 
         make_backup
         
-        #delete_bkp_snapshot $LVM_VOL $LVM_GRP 
+        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
+
         umount_bkp_volume ;;
 
     (test)
-        mount_bkp_volume ;;
+        #make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP ;;
+        #mount_bkp_volume ;;
+        ;;
     (*) 
         usage ;;
 esac
