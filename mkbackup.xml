@@ -16,16 +16,18 @@
         <lvm-snap-size>1Gb</lvm-snap-size>
     </device>
 
-    <task>
+    <task name="task1">
         <type>rsync</type>
-        <name>test-task</name>
         <target>shm</target>
+        <keeper>test-backup</keeper>
+        <device>test-device</device>
         <exclude>shm/Temporary</exclude>
     </task>
 
-    <task>
+    <task name="task2">
         <type>rsync</type>
-        <name>test-task2</name>
         <target>shm</target>
+        <keeper>test-backup</keeper>
+        <device>test-device</device>
     </task>
 </config>

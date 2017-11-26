@@ -131,25 +131,47 @@ function usage () {
     echo "usage here"
 }
 
-case $1 in
-    (start)
+function main () {
+
+    action=$1
+    task=$2
+
+    case $1 in
+        (start)
+            echo "Starting task $task"
+
+            ;;
+    #        mount_bkp_volume
+    #
+    #        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
+    #        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+    #
+    #        make_backup
+    #        
+    #        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
+    #        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
+    #
+    #        umount_bkp_volume ;;
+        (stop)
+            ;;
+        (pause)
+            ;;
+        (resume)
+            ;;
+        (show)
+            ;;
+        (list)
+            ;;
+        (*)
+            usage ;;
+    esac
+
+}
 
 
-#        mount_bkp_volume
-#
-#        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
-#        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
-#
-#        make_backup
-#        
-#        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
-#        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
-#
-#        umount_bkp_volume ;;
+# Start programm:
 
-    (*) 
-        usage ;;
-esac
+main $@
 
 #BKP_NAME=root_`date +%F`.tar.gz
 #BKP_DIR='/home/backup'
