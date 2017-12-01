@@ -15,6 +15,8 @@ SNAP_MOUNT_POINT="/media/${LVM_GRP}-${LVM_VOL}-backup_snap"
 BACKUP_TARGET="shm"
 BACKUP_EXCLUDE="shm/Temporary shm/Testing*"
 
+XMLCONFIG="mkbackup.xml"
+
 #
 # Find backup volume by UUID and moint it
 #
@@ -131,16 +133,109 @@ function usage () {
     echo "usage here"
 }
 
+function getxml() {
+    
+    XPATH=$1
+    XMLFILE=$2
+
+    xmllint --xpath $XPATH $XMLFILE |\
+    sed '/^\/ >/d' | sed 's/<[^>]*.//g'
+}
+
+
 function main () {
 
     action=$1
     task=$2
 
+    #TODO: add XMLCONFIG check & validaing
+
     case $1 in
         (start)
-            echo "Starting task $task"
+            echo "Starting task \"$task\""
+            
+            xpath="//config/task[@name=\"${task}\"]"
+
+            # Search task in config:
+            xmllint --xpath $xpath $XMLCONFIG > /dev/null
+            res=$?
+
+            # No such task:
+            if [ $res == 10 ] ; then
+                echo "No such task \"$task\""
+                exit 10
+            fi
+            # Unclassified error:
+            if [ ! $res == 0 ] ; then
+                echo "Some error occurred during parsing $XMLCONFIG for task \"$task\""
+                exit 1
+            fi
+
+            echo "Task \"$task\" found. Processing"
+
+            # Get params:
+
+            task_type=$(getxml "${xpath}/type" $XMLCONFIG)
+            task_target=$(getxml "${xpath}/target" $XMLCONFIG)
+            task_keeper=$(getxml "${xpath}/keeper" $XMLCONFIG)
+            task_device=$(getxml "${xpath}/device" $XMLCONFIG)
+            task_exclude=$(getxml "${xpath}/exclude" $XMLCONFIG)
+
+            # Search device in config:
+
+            device_xpath="//config/device[@name=\"${task_device}\"]"
+
+            xmllint --xpath $device_xpath $XMLCONFIG > /dev/null
+            res=$?
+
+            # No such device:
+            if [ $res == 10 ] ; then
+                echo "No such device \"$task_device\""
+                exit 10
+            fi
+            # Unclassified error:
+            if [ ! $res == 0 ] ; then
+                echo "Some error occurred during parsing $XMLCONFIG for device \"$task_device\""
+                exit 1
+            fi
+
+            echo "Device \"$task_device\" found. Processing"
+
+            # Get device params:
+
+            device_type=$(getxml "${device_xpath}/type" $XMLCONFIG)
+            device_mntdir=$(getxml "${device_xpath}/mntdir" $XMLCONFIG)
+            device_lvm_group=$(getxml "${device_xpath}/lvm-group" $XMLCONFIG)
+            device_lvm_name=$(getxml "${device_xpath}/lvm-name" $XMLCONFIG)
+            device_lvm_snap_size=$(getxml "${device_xpath}/lvm-snap-size" $XMLCONFIG)
+
+            # Search keeper:
+
+            keeper_xpath="//config/keeper[@name=\"${task_keeper}\"]"
+
+            xmllint --xpath $keeper_xpath $XMLCONFIG > /dev/null
+            res=$?
+
+            # No such device:
+            if [ $res == 10 ] ; then
+                echo "No such keeper \"$task_keeper\""
+                exit 10
+            fi
+            # Unclassified error:
+            if [ ! $res == 0 ] ; then
+                echo "Some error occurred during parsing $XMLCONFIG for keeper \"$task_keeper\""
+                exit 1
+            fi
+
+            echo "Keeper \"$task_keeper\" found. Processing"
+
+            keeper_type=$(getxml "${keeper_xpath}/type" $XMLCONFIG)
+            keeper_dir=$(getxml "${keeper_xpath}/dir" $XMLCONFIG)
+            keeper_mntdir=$(getxml "${keeper_xpath}/mntdir" $XMLCONFIG)
+            keeper_UUID=$(getxml "${keeper_xpath}/UUID" $XMLCONFIG)
 
             ;;
+
     #        mount_bkp_volume
     #
     #        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP

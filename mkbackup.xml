@@ -1,15 +1,13 @@
 <config>
-    <keeper>
+    <keeper name="test-backup">
         <type>fs</type>
-        <name>test-backup</name>
         <dir>backup</dir>
         <mntdir>/media</mntdir>
-        <UUID>"22fec9fd-ce1a-43d0-961c-124e834618a1"</UUID>
+        <UUID>22fec9fd-ce1a-43d0-961c-124e834618a1</UUID>
     </keeper>
 
-    <device>
+    <device name="test-device">
         <type>lvm</type>
-        <name>test-device</name>
         <mntdir>/media</mntdir>
         <lvm-group>hdd</lvm-group>
         <lvm-name>test</lvm-name>
