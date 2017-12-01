@@ -1,6 +1,6 @@
 <config>
     <keeper name="test-backup">
-        <type>fs</type>
+        <type>disk</type>
         <dir>backup</dir>
         <mntdir>/media</mntdir>
         <UUID>22fec9fd-ce1a-43d0-961c-124e834618a1</UUID>

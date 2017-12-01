@@ -1,26 +1,16 @@
 #mkbackup - simple script for backuping by Shm...
 #!/bin/bash
 
-
-LVM_VOL="test"
-LVM_GRP="hdd"
-
-BACKUP_DRIVE_UUID="22fec9fd-ce1a-43d0-961c-124e834618a1"
-BACKUP_MOUNT_POINT="/media/backup"
-
-SNAP_SIZE="5Gb"
-SNAP_NAME="${LVM_VOL}-backup_snap"
-SNAP_MOUNT_POINT="/media/${LVM_GRP}-${LVM_VOL}-backup_snap"
-
-BACKUP_TARGET="shm"
-BACKUP_EXCLUDE="shm/Temporary shm/Testing*"
-
 XMLCONFIG="mkbackup.xml"
 
 #
 # Find backup volume by UUID and moint it
 #
 function mount_bkp_volume () {
+    
+    BACKUP_NAME=$1
+    BACKUP_MOUNT_POINT="${2}/${BACKUP_NAME}"
+    BACKUP_DRIVE_UUID=$3
         
     # get major,minore number for univocal device identification
     dev=$(findfs UUID=$BACKUP_DRIVE_UUID)
@@ -73,60 +63,80 @@ function mount_bkp_volume () {
 }
 
 function umount_bkp_volume () {
-   #TODO: add check with lsof 
-    umount $BACKUP_MOUNT_POINT
+    #TODO: add check with lsof 
+
+    NAME=$1
+    MNTDIR=$2
+
+    _mountpoint="${2}/${1}"
+
+    umount $_mountpoint
+    rmdir $_mountpoint
 }
 
 function make_backup () {
 
-    ex_file=$(mktemp /tmp/mkbackup.XXXXXXXXX)
+    SRC=$1/$3
+    DEST=$2
 
-    for x in $BACKUP_EXCLUDE; do
-        echo $x >> $ex_file
+    TARGET=$3
+    EXCLUDE=$4
+
+    _ex_file=$(mktemp /tmp/mkbackup.XXXXXXXXX)
+
+    for x in $EXCLUDE; do
+        echo $x >> $_ex_file
     done
 
-    src=${SNAP_MOUNT_POINT}/${BACKUP_TARGET} 
-    dest=$BACKUP_MOUNT_POINT
-    rsync -av --exclude-from $ex_file $src $dest
+    rsync -av --exclude-from $_ex_file $SRC $DEST
 
-    rm $ex_file
+    rm $_ex_file
 }
 
 function make_bkp_snapshot () {
-    name=$1
-    vol=$2
-    group=$3
 
-    lvcreate -n "${name}" -s "${group}/${vol}" -L $SNAP_SIZE
+    NAME="$1-snap"
+    GROUP=$2
+    VOL=$3
+    SNAP_SIZE=$4
+
+    lvcreate -n "${NAME}" -s "${GROUP}/${VOL}" -L $SNAP_SIZE
 }
 
 function mount_snapshot () {
-    name=$1
-    group=$2
-    mountpoint=$3
 
-    mkdir -p $mountpoint
+    NAME="$1-snap"
+    GROUP=$2
+    MNTPOINT="$3/$NAME"
 
-    mount /dev/${group}/${name} ${mountpoint}
+    mkdir -p $MNTPOINT
+
+    mount /dev/${GROUP}/${NAME} ${MNTPOINT}
     # Error
     if [ $? == 1 ] ; then
-        echo "Error: can't mount ${group}/${name} at ${mountpoint}"
+        echo "Error: can't mount ${GROUP}/${NAME} at ${MNTPOINT}"
         exit 1 
     fi
 }
 
 function umount_snapshot () {
-    name=$1
-    group=$2
-    mountpoint=$3
 
-    umount "${mountpoint}"
+    NAME=$1
+    GROUP=$2
+    MNTDIR=$3
+
+    _mountpoint="${MNTDIR}/${NAME}-snap"
+
+    umount "${_mountpoint}"
+    rmdir $_mountpoint
 }
 
 function delete_bkp_snapshot () {
-    name=$1
-    group=$2
-    lvremove -f "${group}/${name}"
+
+    group=$1
+    name=$2
+
+    lvremove -f "${group}/${name}-snap"
 }
 
 function usage () {
@@ -171,20 +181,6 @@ function check_entry() {
     echo "Testing: $TYPE \"$NAME\" found. Processing"
 }
 
-#
-# Get param by name
-#
-function get_param() {
-
-    TYPE=$1
-    NAME=$2
-    XMLFILE=$3
-
-    _xpath="//config/${TYPE}[@name=\"${NAME}\"]"
-
-}
-
-
 function main () {
 
     action=$1
@@ -212,6 +208,7 @@ function main () {
             _device_xpath="//config/device[@name=\"${task_device}\"]"
 
             # Get params from device
+            device_name=$task_device
             device_type=$(getxml "${_device_xpath}/type" $XMLCONFIG)
             device_mntdir=$(getxml "${_device_xpath}/mntdir" $XMLCONFIG)
             device_lvm_group=$(getxml "${_device_xpath}/lvm-group" $XMLCONFIG)
@@ -222,24 +219,76 @@ function main () {
             check_entry "keeper" $task_keeper
             _keeper_xpath="//config/keeper[@name=\"${task_keeper}\"]"
             
+            keeper_name=$task_keeper
             keeper_type=$(getxml "${_keeper_xpath}/type" $XMLCONFIG)
             keeper_dir=$(getxml "${_keeper_xpath}/dir" $XMLCONFIG)
             keeper_mntdir=$(getxml "${_keeper_xpath}/mntdir" $XMLCONFIG)
             keeper_UUID=$(getxml "${_keeper_xpath}/UUID" $XMLCONFIG)
 
-            ;;
+            # Mount keeper
+            case $keeper_type in
+                (disk)
+                    mount_bkp_volume $keeper_name $keeper_mntdir $keeper_UUID
+                    dest="${keeper_mntdir}/${keeper_name}"
+                    ;;
+                (*)
+                    echo "Unknown keeper type. Abort."
+                    exit 1
+                    ;;
+            esac
 
-    #        mount_bkp_volume
-    #
-    #        make_bkp_snapshot $SNAP_NAME $LVM_VOL $LVM_GRP
-    #        mount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
-    #
-    #        make_backup
-    #        
-    #        umount_snapshot $SNAP_NAME $LVM_GRP $SNAP_MOUNT_POINT
-    #        delete_bkp_snapshot $SNAP_NAME $LVM_GRP 
-    #
-    #        umount_bkp_volume ;;
+            # Device prepearing
+            case $device_type in
+                (lvm)
+                    make_bkp_snapshot $device_name \
+                        $device_lvm_group \
+                        $device_lvm_name  \
+                        $device_lvm_snap_size
+
+                    mount_snapshot $device_name \
+                        $device_lvm_group \
+                        $device_mntdir
+
+                    src="${device_mntdir}/${device_name}-snap"
+
+                    ;;
+                (*)
+                    echo "Unknown device type. Abort."
+                    # unmount here!
+                    exit 1
+                    ;;
+            esac
+
+            # Backup here:
+            case $task_type in
+                (rsync)
+                    make_backup $src $dest $task_target $task_exclude
+                    ;;
+                (*)
+                    echo "Unknown task type. Abort."
+                    # unmount here!
+                    exit 1
+                    ;;
+            esac
+
+            # Device finalizing
+            case $device_type in
+                (lvm)
+                    umount_snapshot $device_name \
+                        $device_lvm_group \
+                        $device_mntdir
+                    delete_bkp_snapshot $device_lvm_group $device_name
+                    ;;
+            esac
+
+            # Keeper finilazing
+            case $keeper_type in
+                (disk)
+                    umount_bkp_volume $keeper_name $keeper_mntdir
+                    ;;
+            esac
+
+            ;;
         (stop)
             ;;
         (pause)
