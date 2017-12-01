@@ -142,6 +142,48 @@ function getxml() {
     sed '/^\/ >/d' | sed 's/<[^>]*.//g'
 }
 
+#
+# Checking for the presence of in XML by name
+#
+function check_entry() {
+    
+    TYPE=$1 # device, keeper, task, etc...
+    NAME=$2 # name
+    XMLFILE=$3 #xmlfile
+
+    _xpath="//config/${TYPE}[@name=\"${NAME}\"]"
+
+    xmllint --xpath $_xpath $XMLFILE > /dev/null
+    _res=$?
+
+    # No such device:
+    if [ $_res == 10 ] ; then
+        echo "No such ${TYPE} \"${NAME}\""
+        exit 10
+    fi
+
+    # Unclassified error:
+    if [ ! $_res == 0 ] ; then
+        echo "Some error occurred during parsing ${XMLFILE} for ${TYPE} \"${NAME}\""
+        exit 1
+    fi
+
+    echo "Testing: $TYPE \"$NAME\" found. Processing"
+}
+
+#
+# Get param by name
+#
+function get_param() {
+
+    TYPE=$1
+    NAME=$2
+    XMLFILE=$3
+
+    _xpath="//config/${TYPE}[@name=\"${NAME}\"]"
+
+}
+
 
 function main () {
 
@@ -153,86 +195,37 @@ function main () {
     case $1 in
         (start)
             echo "Starting task \"$task\""
+
+            # Check task
+            check_entry "task" $task $XMLCONFIG
+            _task_xpath="//config/task[@name=\"${task}\"]"
+
+            # Get params from task
+            task_type=$(getxml "${_task_xpath}/type" $XMLCONFIG)
+            task_target=$(getxml "${_task_xpath}/target" $XMLCONFIG)
+            task_keeper=$(getxml "${_task_xpath}/keeper" $XMLCONFIG)
+            task_device=$(getxml "${_task_xpath}/device" $XMLCONFIG)
+            task_exclude=$(getxml "${_task_xpath}/exclude" $XMLCONFIG)
+
+            # Check device
+            check_entry "device" $task_device
+            _device_xpath="//config/device[@name=\"${task_device}\"]"
+
+            # Get params from device
+            device_type=$(getxml "${_device_xpath}/type" $XMLCONFIG)
+            device_mntdir=$(getxml "${_device_xpath}/mntdir" $XMLCONFIG)
+            device_lvm_group=$(getxml "${_device_xpath}/lvm-group" $XMLCONFIG)
+            device_lvm_name=$(getxml "${_device_xpath}/lvm-name" $XMLCONFIG)
+            device_lvm_snap_size=$(getxml "${_device_xpath}/lvm-snap-size" $XMLCONFIG)
+
+            # Check keeper
+            check_entry "keeper" $task_keeper
+            _keeper_xpath="//config/keeper[@name=\"${task_keeper}\"]"
             
-            xpath="//config/task[@name=\"${task}\"]"
-
-            # Search task in config:
-            xmllint --xpath $xpath $XMLCONFIG > /dev/null
-            res=$?
-
-            # No such task:
-            if [ $res == 10 ] ; then
-                echo "No such task \"$task\""
-                exit 10
-            fi
-            # Unclassified error:
-            if [ ! $res == 0 ] ; then
-                echo "Some error occurred during parsing $XMLCONFIG for task \"$task\""
-                exit 1
-            fi
-
-            echo "Task \"$task\" found. Processing"
-
-            # Get params:
-
-            task_type=$(getxml "${xpath}/type" $XMLCONFIG)
-            task_target=$(getxml "${xpath}/target" $XMLCONFIG)
-            task_keeper=$(getxml "${xpath}/keeper" $XMLCONFIG)
-            task_device=$(getxml "${xpath}/device" $XMLCONFIG)
-            task_exclude=$(getxml "${xpath}/exclude" $XMLCONFIG)
-
-            # Search device in config:
-
-            device_xpath="//config/device[@name=\"${task_device}\"]"
-
-            xmllint --xpath $device_xpath $XMLCONFIG > /dev/null
-            res=$?
-
-            # No such device:
-            if [ $res == 10 ] ; then
-                echo "No such device \"$task_device\""
-                exit 10
-            fi
-            # Unclassified error:
-            if [ ! $res == 0 ] ; then
-                echo "Some error occurred during parsing $XMLCONFIG for device \"$task_device\""
-                exit 1
-            fi
-
-            echo "Device \"$task_device\" found. Processing"
-
-            # Get device params:
-
-            device_type=$(getxml "${device_xpath}/type" $XMLCONFIG)
-            device_mntdir=$(getxml "${device_xpath}/mntdir" $XMLCONFIG)
-            device_lvm_group=$(getxml "${device_xpath}/lvm-group" $XMLCONFIG)
-            device_lvm_name=$(getxml "${device_xpath}/lvm-name" $XMLCONFIG)
-            device_lvm_snap_size=$(getxml "${device_xpath}/lvm-snap-size" $XMLCONFIG)
-
-            # Search keeper:
-
-            keeper_xpath="//config/keeper[@name=\"${task_keeper}\"]"
-
-            xmllint --xpath $keeper_xpath $XMLCONFIG > /dev/null
-            res=$?
-
-            # No such device:
-            if [ $res == 10 ] ; then
-                echo "No such keeper \"$task_keeper\""
-                exit 10
-            fi
-            # Unclassified error:
-            if [ ! $res == 0 ] ; then
-                echo "Some error occurred during parsing $XMLCONFIG for keeper \"$task_keeper\""
-                exit 1
-            fi
-
-            echo "Keeper \"$task_keeper\" found. Processing"
-
-            keeper_type=$(getxml "${keeper_xpath}/type" $XMLCONFIG)
-            keeper_dir=$(getxml "${keeper_xpath}/dir" $XMLCONFIG)
-            keeper_mntdir=$(getxml "${keeper_xpath}/mntdir" $XMLCONFIG)
-            keeper_UUID=$(getxml "${keeper_xpath}/UUID" $XMLCONFIG)
+            keeper_type=$(getxml "${_keeper_xpath}/type" $XMLCONFIG)
+            keeper_dir=$(getxml "${_keeper_xpath}/dir" $XMLCONFIG)
+            keeper_mntdir=$(getxml "${_keeper_xpath}/mntdir" $XMLCONFIG)
+            keeper_UUID=$(getxml "${_keeper_xpath}/UUID" $XMLCONFIG)
 
             ;;
 
