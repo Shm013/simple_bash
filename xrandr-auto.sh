@@ -1,0 +1,2 @@
+xrandr --auto
+awesome -r
