@@ -1,0 +1,31 @@
+<config>
+    <keeper name="test-backup">
+        <type>disk</type>
+        <dir>backup</dir>
+        <mntdir>/media</mntdir>
+        <UUID>22fec9fd-ce1a-43d0-961c-124e834618a1</UUID>
+    </keeper>
+
+    <device name="test-device">
+        <type>lvm</type>
+        <mntdir>/media</mntdir>
+        <lvm-group>hdd</lvm-group>
+        <lvm-name>test</lvm-name>
+        <lvm-snap-size>1Gb</lvm-snap-size>
+    </device>
+
+    <task name="task1">
+        <type>rsync</type>
+        <target>shm</target>
+        <keeper>test-backup</keeper>
+        <device>test-device</device>
+        <exclude>shm/Temporary</exclude>
+    </task>
+
+    <task name="task2">
+        <type>rsync</type>
+        <target>shm</target>
+        <keeper>test-backup</keeper>
+        <device>test-device</device>
+    </task>
+</config>
