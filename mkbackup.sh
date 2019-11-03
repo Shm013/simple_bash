@@ -229,7 +229,8 @@ function main () {
             case $keeper_type in
                 (disk)
                     mount_bkp_volume $keeper_name $keeper_mntdir $keeper_UUID
-                    dest="${keeper_mntdir}/${keeper_name}"
+                    dest="${keeper_mntdir}/${keeper_name}/${keeper_dir}"
+                    mkdir -p $dest # Create directory for backup
                     ;;
                 (*)
                     echo "Unknown keeper type. Abort."
