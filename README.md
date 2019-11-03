@@ -1,4 +1,4 @@
-Simple_bash
+simple_bash
 ===========
 
 Simple scripts for bash by Shm...
